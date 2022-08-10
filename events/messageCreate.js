@@ -1,28 +1,29 @@
-import { EmbedBuilder } from "discord.js";
+import cooldown_control from "../utils/cooldown_control.js";
 
 export default (client) => {
-  client.on("messageCreate", (msg) => {
+  const prefix = process.env.PREFIX;
 
-    if (msg.content == "info") {
-      const setDefaultInfo = new EmbedBuilder()
-        .setColor("#be69fa")
-        .setTitle("Civis Bot")
-        .setURL("https://github.com/faridasad")
-        .setAuthor({
-          name: "Farid Asad",
-          iconURL: "https://avatars.githubusercontent.com/u/85695544?v=4",
-          url: "https://github.com/faridasad",
-        })
-        .setThumbnail("https://discord.bots.gg/img/logo_transparent.png")
-        .setDescription(
-          "Civis Bot, the simplest discord bot you have ever seen"
-        )
-        .setTimestamp()
-        .setFooter({
-          text: "Make it Better",
-          iconURL: "https://discord.bots.gg/img/logo_transparent.png",
-        });
-      msg.channel.send({ embeds: [setDefaultInfo] });
+  client.on("messageCreate", (message) => {
+    if (!message.content.startsWith(prefix)) return;
+
+    const args = message.content.slice(1).trim().split(/ +/);
+    const commandName = args.shift().toLowerCase();
+
+    const command = client.commands.get(commandName);
+    if (!command) return;
+
+    // Permission Control
+    if(command.permission && !message.member.permission.has(command.permission)) return message.reply(`You need to have \`${command.permission}\` permission to use this command!`)
+
+    // Cooldown Control
+    const cooldown = cooldown_control(command, message.member.id)
+    if(cooldown) return message.reply(`You have to wait \`${cooldown}\` seconds to use this command again!`)
+
+    try {
+      command.execute(message);
+    } catch (error) {
+      console.error(error);
+      console.log("Something went wrong with the command");
     }
   });
 };
